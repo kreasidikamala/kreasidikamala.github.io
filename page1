@@ -1,0 +1,222 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowDown, ArrowRight, Check, ChevronLeft, ChevronRight, Copy, Heart, MapPin, Menu, Music2, Pause, Play, Send, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const weddingAt = new Date("2026-09-30T19:15:00+08:00").getTime();
+const mapEmbed = "https://www.google.com/maps?q=Four%20Points%20by%20Sheraton%20Makassar&output=embed";
+const mapLink = "https://www.google.com/maps/search/?api=1&query=Four%20Points%20by%20Sheraton%20Makassar";
+const photos = [
+  { src: "/photos/gallery-1.webp", alt: "Arya dan Emira berpelukan di tepi pantai saat senja", caption: "Di tepi senja", shape: "portrait" },
+  { src: "/photos/gallery-2-detail.webp", alt: "Potret dekat Arya dan Emira yang saling memandang", caption: "Saling menemukan", shape: "landscape" },
+  { src: "/photos/gallery-3.webp", alt: "Arya menggandeng Emira menari di pantai", caption: "Langkah bersama", shape: "portrait" },
+  { src: "/photos/gallery-2.webp", alt: "Arya dan Emira bergandengan tangan di bibir pantai", caption: "Hari yang sama", shape: "portrait" },
+  { src: "/photos/gallery-3-detail.webp", alt: "Arya dan Emira menari dengan latar matahari terbenam", caption: "Selalu berdua", shape: "landscape" },
+  { src: "/photos/gallery-1-detail.webp", alt: "Potret dekat pasangan di bawah cahaya senja", caption: "Sebuah janji", shape: "portrait" },
+];
+type Wish = { id: number; name: string; message: string; createdAt: string };
+type Attendance = "yes" | "no";
+
+function Countdown() {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => setRemaining(Math.max(0, weddingAt - Date.now()));
+    update();
+    const interval = window.setInterval(update, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+  const values = remaining === null ? null : [
+    Math.floor(remaining / 86400000),
+    Math.floor((remaining / 3600000) % 24),
+    Math.floor((remaining / 60000) % 60),
+    Math.floor((remaining / 1000) % 60),
+  ];
+  return <div className="countdown" role="timer" aria-label="Hitung mundur menuju pernikahan">
+    {["Hari", "Jam", "Menit", "Detik"].map((label, i) => <div className="count-unit" key={label}><span className="count-number">{values ? String(values[i]).padStart(2, "0") : "--"}</span><span className="count-label">{label}</span></div>)}
+  </div>;
+}
+
+function EventCard({ kind, time }: { kind: string; time: string }) {
+  return <article className="event-card">
+    <div className="event-card-top"><span className="eyebrow">30 September 2026</span><h3>{kind}</h3><span className="event-time">{time} <small>WITA</small></span><span className="fine-rule" /><p className="venue">Four Points by Sheraton Makassar</p><p className="event-city"><MapPin size={16} aria-hidden="true" /> Makassar, Sulawesi Selatan</p></div>
+    <div className="map-frame"><iframe title={`Peta lokasi ${kind} di Four Points by Sheraton Makassar`} src={mapEmbed} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen /></div>
+    <a className="event-map-link" href={mapLink} target="_blank" rel="noopener noreferrer">Buka petunjuk arah <ArrowRight size={17} aria-hidden="true" /></a>
+  </article>;
+}
+
+export default function Home() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicError, setMusicError] = useState("");
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const [attendance, setAttendance] = useState<Attendance>("yes");
+  const [guestCount, setGuestCount] = useState("1");
+  const [rsvpName, setRsvpName] = useState("");
+  const [rsvpState, setRsvpState] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [wishName, setWishName] = useState("");
+  const [wishText, setWishText] = useState("");
+  const [wishState, setWishState] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [wishes, setWishes] = useState<Wish[]>([]);
+  const [wishesLoading, setWishesLoading] = useState(true);
+  const [wishesError, setWishesError] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); }
+    }), { threshold: 0.1, rootMargin: "0px 0px -24px 0px" });
+    document.documentElement.classList.add("motion-ready");
+    document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+    return () => { observer.disconnect(); document.documentElement.classList.remove("motion-ready"); };
+  }, []);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty("--hero-shift", `${Math.min(window.scrollY * 0.12, 85)}px`);
+        frame = 0;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); };
+  }, []);
+
+  const loadWishes = useCallback(async () => {
+    try {
+      const response = await fetch("/api/wishes", { cache: "no-store" });
+      if (!response.ok) throw new Error("Gagal memuat ucapan");
+      const data = await response.json() as { wishes: Wish[] };
+      setWishes(data.wishes); setWishesError(false);
+    } catch { setWishesError(true); }
+    finally { setWishesLoading(false); }
+  }, []);
+  useEffect(() => { void loadWishes(); }, [loadWishes]);
+
+  const postRsvp = useCallback(async (name: string, status: Attendance, guests: number) => {
+    const trimmed = name.trim();
+    if (trimmed.length < 2 || trimmed.length > 80 || !["yes", "no"].includes(status) || !Number.isInteger(guests) || guests < 0 || guests > 5 || (status === "yes" && guests < 1) || (status === "no" && guests !== 0)) throw new Error("Periksa nama dan jumlah tamu.");
+    setRsvpState("saving");
+    try {
+      const response = await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: trimmed, attendance: status, guests }) });
+      if (!response.ok) throw new Error("Konfirmasi belum terkirim.");
+      setRsvpState("success"); setRsvpName("");
+      return { status: "tersimpan", attendance: status, guests };
+    } catch (error) { setRsvpState("error"); throw error; }
+  }, []);
+  const postWish = useCallback(async (name: string, message: string) => {
+    const trimmedName = name.trim(), trimmedMessage = message.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 80 || trimmedMessage.length < 3 || trimmedMessage.length > 600) throw new Error("Periksa nama dan isi ucapan.");
+    setWishState("saving");
+    try {
+      const response = await fetch("/api/wishes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: trimmedName, message: trimmedMessage }) });
+      if (!response.ok) throw new Error("Ucapan belum terkirim.");
+      const data = await response.json() as { wish: Wish };
+      setWishes(current => [data.wish, ...current].slice(0, 30));
+      setWishName(""); setWishText(""); setWishState("success"); setWishesError(false);
+      return { status: "terkirim", id: data.wish.id };
+    } catch (error) { setWishState("error"); throw error; }
+  }, []);
+
+  useEffect(() => {
+    type Context = { registerTool: (tool: Record<string, unknown>, options?: { signal: AbortSignal }) => void | Promise<void> };
+    const context = (document as Document & { modelContext?: Context }).modelContext;
+    if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    const register = (tool: Record<string, unknown>) => { try { void Promise.resolve(context.registerTool(tool, { signal: lifecycle.signal })).catch(() => {}); } catch {} };
+    register({ name: "submit_wedding_rsvp", title: "Konfirmasi kehadiran", description: "Kirim RSVP untuk undangan Arya dan Emira dan tampilkan hasilnya pada formulir.", inputSchema: { type: "object", properties: { name: { type: "string" }, attendance: { enum: ["yes", "no"] }, guests: { type: "integer", minimum: 0, maximum: 5 } }, required: ["name", "attendance", "guests"], additionalProperties: false }, annotations: { readOnlyHint: false }, execute: (input: { name: string; attendance: Attendance; guests: number }) => postRsvp(input.name, input.attendance, input.guests) });
+    register({ name: "post_wedding_wish", title: "Kirim ucapan", description: "Kirim ucapan atau doa untuk Arya dan Emira dan tambahkan ke daftar ucapan.", inputSchema: { type: "object", properties: { name: { type: "string" }, message: { type: "string" } }, required: ["name", "message"], additionalProperties: false }, annotations: { readOnlyHint: false }, execute: (input: { name: string; message: string }) => postWish(input.name, input.message) });
+    return () => lifecycle.abort();
+  }, [postRsvp, postWish]);
+
+  async function startMusic() {
+    if (!audioRef.current) return;
+    try {
+      await audioRef.current.play();
+      setMusicError("");
+    } catch {
+      setMusicPlaying(false);
+      setMusicError("Ketuk putar untuk memulai musik.");
+    }
+  }
+  function openInvitation() {
+    setOpened(true);
+    void startMusic();
+    document.querySelector("#countdown")?.scrollIntoView({ behavior: "smooth" });
+  }
+  function toggleMusic() {
+    if (!audioRef.current) return;
+    if (audioRef.current.paused) void startMusic();
+    else audioRef.current.pause();
+  }
+  async function submitRsvp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); try { await postRsvp(rsvpName, attendance, attendance === "yes" ? Number(guestCount) : 0); } catch {}
+  }
+  async function submitWish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); try { await postWish(wishName, wishText); } catch {}
+  }
+  async function copyAccount() {
+    try { await navigator.clipboard.writeText("11111123938"); setCopied(true); window.setTimeout(() => setCopied(false), 2500); } catch { setCopied(false); }
+  }
+  function scrollGallery(direction: number) {
+    const width = galleryRef.current?.querySelector(".gallery-item")?.getBoundingClientRect().width ?? 280;
+    galleryRef.current?.scrollBy({ left: direction * (width + 14), behavior: "smooth" });
+  }
+
+  return <main>
+    <section className="hero" id="beranda">
+      <header className="site-header">
+        <a href="#beranda" className="brand" aria-label="Arya dan Emira, kembali ke atas">A<span>&</span>E</a>
+        <nav className={menuOpen ? "nav-links nav-open" : "nav-links"} aria-label="Navigasi utama">
+          {([["Kisah", "#kisah"], ["Acara", "#acara"], ["Galeri", "#galeri"], ["RSVP", "#rsvp"], ["Ucapan", "#ucapan"]] as const).map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>)}
+        </nav>
+        <button className="menu-button" type="button" aria-label={menuOpen ? "Tutup menu" : "Buka menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
+        <span className="header-date">30 · 09 · 2026</span>
+      </header>
+      <div className="hero-content">
+        <div className="hero-copy">
+          <div className="eyebrow hero-eyebrow"><span className="small-line" /> THE WEDDING OF</div>
+          <h1>Arya <em>&</em><br />Emira</h1>
+          <p className="hero-fullname">Arya Saloka <span>dan</span> Emira Feriha</p>
+          <span className="hero-divider" />
+          <p className="hero-date-text">Rabu, 30 September 2026<br /><span>Makassar, Indonesia</span></p>
+          <Button type="button" className="hero-cta" onClick={openInvitation}>Buka undangan <ArrowDown size={17} aria-hidden="true" /></Button>
+        </div>
+        <div className="hero-image-wrap"><div className="hero-image-frame"><img src="/photos/hero.webp" alt="Arya dan Emira di antara rangkaian bunga di pantai saat matahari terbenam" width="1000" height="1500" fetchPriority="high" /></div><div className="hero-image-caption"><span>SEBUAH AWAL, SELAMANYA</span><span>01 / 04</span></div></div>
+      </div>
+      <div className="hero-bottom"><span>Dengan segala cinta, kami mengundang Anda.</span><a href="#countdown" aria-label="Gulir ke hitung mundur">SCROLL TO EXPLORE <ArrowDown size={15} /></a></div>
+    </section>
+
+    <section className="count-section section-pad" id="countdown"><div className="section-shell count-inner reveal"><span className="eyebrow dark-eyebrow">SEBUAH HARI UNTUK DIKENANG</span><h2>Menuju hari <em>bahagia</em></h2><p>Kami tak sabar merayakan awal perjalanan ini bersama Anda.</p><Countdown /><div className="count-bottom"><span>RABU</span><span className="count-line" /><strong>30 SEPTEMBER 2026</strong><span className="count-line" /><span>MAKASSAR</span></div></div></section>
+
+    <section className="story-section section-pad" id="kisah"><div className="section-shell story-grid">
+      <div className="story-visual reveal"><div className="story-photo"><img src="/photos/gallery-2.webp" alt="Arya dan Emira berjalan bersama di pantai saat senja" width="780" height="1170" loading="lazy" /></div><span className="story-photo-note">“Dari satu pertemuan, menuju selamanya.”</span></div>
+      <div className="story-copy reveal"><span className="eyebrow dark-eyebrow">KISAH KAMI</span><h2>Semua bermula<br />di <em>tepi senja.</em></h2><div className="story-text"><p>Arya bertemu Emira saat perempuan asal Turki itu memintanya mengambil foto di pantai menjelang senja. Obrolan singkat mereka berlanjut menjadi pertemuan keesokan harinya, lalu panggilan jarak jauh ketika Emira pulang.</p><p>Meski terpisah negara, mereka terus saling mengenal dan perlahan menyusun masa depan bersama. Arya kemudian datang ke Turki untuk menemui keluarga Emira dan meminta restu.</p><p>Setahun setelah pertemuan pertama, ia mengajak Emira kembali ke pantai yang sama. Di antara dua tiang bunga dengan matahari terbenam di belakangnya, Arya berlutut dan melamar Emira. Dengan mata berkaca-kaca, Emira menjawab ya.</p></div><span className="story-signature">Arya & Emira</span></div>
+    </div></section>
+
+    <section className="event-section section-pad" id="acara"><div className="section-shell"><div className="section-heading light-heading reveal"><span className="eyebrow">HARI YANG KAMI NANTIKAN</span><h2>Waktu & <em>tempat</em></h2><p>Kehadiran Anda akan membuat hari kami semakin berarti.</p></div><div className="event-grid reveal"><EventCard kind="Akad Nikah" time="19:15" /><EventCard kind="Resepsi" time="20:16" /></div></div></section>
+
+    <section className="gallery-section section-pad" id="galeri"><div className="section-shell"><div className="gallery-heading reveal"><div><span className="eyebrow dark-eyebrow">GALERI KAMI</span><h2>Dalam setiap <em>bingkai</em></h2></div><div className="gallery-controls"><button type="button" onClick={() => scrollGallery(-1)} aria-label="Foto sebelumnya"><ChevronLeft size={21} /></button><button type="button" onClick={() => scrollGallery(1)} aria-label="Foto berikutnya"><ChevronRight size={21} /></button></div></div><div className="gallery-grid reveal" ref={galleryRef} aria-label="Galeri enam bingkai foto Arya dan Emira">{photos.map((photo, index) => <figure className={`gallery-item ${photo.shape}`} key={photo.src}><img src={photo.src} alt={photo.alt} loading="lazy" /><figcaption><span>{String(index + 1).padStart(2, "0")}</span>{photo.caption}</figcaption></figure>)}</div><p className="gallery-note">Enam bingkai dari tiga momen foto kami.</p></div></section>
+
+    <section className="reply-section section-pad" id="rsvp"><div className="section-shell reply-grid"><div className="reply-intro reveal"><span className="eyebrow dark-eyebrow">KONFIRMASI KEHADIRAN</span><h2>Temani kami di<br />hari <em>istimewa.</em></h2><p>Mohon beri kabar apakah Anda dapat hadir. Kami menantikan kebersamaan dengan Anda.</p><div className="reply-ornament" aria-hidden="true">A <span>✦</span> E</div></div><div className="form-card reveal"><h3>RSVP</h3><p>Konfirmasi kehadiran Anda</p><form onSubmit={submitRsvp}>
+      <label htmlFor="rsvp-name">Nama tamu</label><input id="rsvp-name" name="name" type="text" maxLength={80} minLength={2} required autoComplete="name" placeholder="Nama lengkap Anda" value={rsvpName} onChange={e => { setRsvpName(e.target.value); setRsvpState("idle"); }} />
+      <fieldset><legend>Kehadiran</legend><RadioGroup value={attendance} onValueChange={value => { setAttendance(value as Attendance); setRsvpState("idle"); }} className="attendance-options"><label className={attendance === "yes" ? "option active" : "option"}><RadioGroupItem value="yes" id="attend-yes" /> Ya, saya hadir</label><label className={attendance === "no" ? "option active" : "option"}><RadioGroupItem value="no" id="attend-no" /> Maaf, tidak bisa hadir</label></RadioGroup></fieldset>
+      {attendance === "yes" && <div className="guest-select"><label id="guest-label">Jumlah tamu yang hadir</label><Select value={guestCount} onValueChange={setGuestCount}><SelectTrigger aria-labelledby="guest-label" className="select-trigger"><SelectValue /></SelectTrigger><SelectContent>{[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n} orang</SelectItem>)}</SelectContent></Select></div>}
+      <Button type="submit" disabled={rsvpState === "saving"} className="form-submit">{rsvpState === "saving" ? "Mengirim..." : "Kirim konfirmasi"} <ArrowRight size={17} /></Button><p className={`form-feedback ${rsvpState}`} role="status" aria-live="polite">{rsvpState === "success" ? "Terima kasih, konfirmasi Anda sudah tersimpan." : rsvpState === "error" ? "Maaf, konfirmasi belum terkirim. Coba lagi." : ""}</p>
+    </form></div></div></section>
+
+    <section className="wishes-section section-pad" id="ucapan"><div className="section-shell wishes-grid"><div className="wishes-form-col reveal"><span className="eyebrow dark-eyebrow">UCAPAN & DOA</span><h2>Tinggalkan <em>pesan</em><br />untuk kami</h2><p>Setiap kata baik dari Anda akan menjadi kenangan yang kami simpan.</p><form className="wish-form" onSubmit={submitWish}><label htmlFor="wish-name">Nama Anda</label><input id="wish-name" type="text" minLength={2} maxLength={80} required placeholder="Nama lengkap Anda" value={wishName} onChange={e => { setWishName(e.target.value); setWishState("idle"); }} /><label htmlFor="wish-message">Ucapan & doa</label><textarea id="wish-message" minLength={3} maxLength={600} required rows={4} placeholder="Tulis pesan untuk Arya dan Emira..." value={wishText} onChange={e => { setWishText(e.target.value); setWishState("idle"); }} /><Button type="submit" disabled={wishState === "saving"} className="form-submit">{wishState === "saving" ? "Mengirim..." : "Kirim ucapan"} <Send size={16} /></Button><p className={`form-feedback ${wishState}`} role="status" aria-live="polite">{wishState === "success" ? "Terima kasih, ucapan Anda sudah tampil." : wishState === "error" ? "Maaf, ucapan belum terkirim. Coba lagi." : ""}</p></form></div><div className="wishes-list-col reveal"><div className="wishes-list-head"><Heart size={21} strokeWidth={1.5} aria-hidden="true" /><span>Pesan dari orang-orang tersayang</span></div><div className="wishes-list" aria-live="polite">{wishesLoading ? <p className="empty-wishes">Memuat ucapan...</p> : wishesError ? <div className="empty-wishes">Ucapan belum dapat dimuat. <button type="button" onClick={() => { setWishesLoading(true); void loadWishes(); }}>Coba lagi</button></div> : wishes.length === 0 ? <p className="empty-wishes">Belum ada ucapan. Jadilah yang pertama mengirim doa.</p> : wishes.map(wish => <article className="wish-card" key={wish.id}><div className="wish-avatar" aria-hidden="true">{wish.name.charAt(0).toUpperCase()}</div><div><div className="wish-meta"><strong>{wish.name}</strong><time dateTime={wish.createdAt}>{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Makassar" }).format(new Date(wish.createdAt))}</time></div><p>{wish.message}</p></div></article>)}</div></div></div></section>
+
+    <section className="gift-section section-pad" id="hadiah"><div className="section-shell gift-inner reveal"><span className="eyebrow">TANDA KASIH</span><h2>Wedding <em>gift</em></h2><p>Doa dan kehadiran Anda adalah hadiah terindah. Jika ingin mengirimkan tanda kasih, Anda dapat menggunakan rekening berikut.</p><div className="bank-card"><span className="bank-mark">BSI</span><span className="bank-name">Bank Syariah Indonesia</span><strong>11111123938</strong><Button type="button" onClick={copyAccount} className="copy-button">{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? "Tersalin" : "Salin nomor rekening"}</Button></div></div></section>
+    <footer className="footer"><span className="eyebrow">TERIMA KASIH</span><h2>Sampai jumpa di hari bahagia kami.</h2><p>Merupakan kehormatan bagi kami untuk berbagi momen ini bersama Anda.</p><div className="footer-names">Arya <em>&</em> Emira</div><span className="footer-date">30 SEPTEMBER 2026 · MAKASSAR</span><a href="#beranda" className="back-top">Kembali ke atas ↑</a></footer>
+
+    <audio ref={audioRef} src="/audio/wedding.mp3" loop preload="none" onPlay={() => setMusicPlaying(true)} onPause={() => setMusicPlaying(false)} onError={() => { setMusicPlaying(false); setMusicError("Musik belum dapat dimuat."); }} />
+    {opened && <div className="music-widget"><button type="button" className="music-toggle" onClick={toggleMusic} aria-label={musicPlaying ? "Jeda musik" : "Putar musik"} aria-pressed={musicPlaying}>{musicPlaying ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}<span>{musicPlaying ? "Jeda musik" : "Putar musik"}</span><Music2 size={15} /></button>{musicError && <span className="music-error" role="status">{musicError}</span>}</div>}
+  </main>;
+}
