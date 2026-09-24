@@ -2,6 +2,8 @@
 
 Undangan ini memakai GitHub Pages untuk tampilan dan Cloud Firestore untuk data bersama. Ucapan terbaru tampil langsung kepada semua pengunjung. RSVP disimpan untuk penyelenggara dan tidak dapat dibaca melalui aplikasi publik.
 
+**Status project (24 September 2026):** database Standard `(default)` berada di `asia-southeast2` (Jakarta), Anonymous Authentication aktif, dan aturan pada bagian 2 sudah diterbitkan. Langkah penyiapan di bawah menjadi rujukan bila project dibuat ulang.
+
 ## 1. Siapkan Firebase
 
 1. Di Firebase Console project `undangan-218fe`, buat **Cloud Firestore** edisi Standard dengan ID **(default)** jika belum ada. Pilih lokasi database yang sesuai dengan lokasi tamu; lokasi resource default tidak dapat diubah setelah dibuat. Pilih **Production mode** agar akses awal ditolak sampai aturan di langkah 2 diterbitkan.
@@ -22,4 +24,4 @@ Aturan tersebut mengizinkan tamu membaca 30 ucapan terbaru dan menambah ucapan, 
 
 Dokumen ucapan berada di subkoleksi `invitations/amelia-zeus/wishes`. Halaman menampilkan 30 terbaru; data yang lebih lama tetap ada di Firestore. RSVP atau ucapan lama yang sebelumnya hanya tersimpan di `localStorage` tidak otomatis berpindah ke Firestore.
 
-**Sebelum menerbitkan:** buat database, aktifkan Anonymous Authentication, dan terbitkan aturan Firestore. Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
+Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
