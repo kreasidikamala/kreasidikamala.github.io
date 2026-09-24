@@ -4,9 +4,9 @@ Undangan ini memakai GitHub Pages untuk tampilan dan Cloud Firestore untuk data 
 
 ## 1. Siapkan Firebase
 
-1. Buka Firebase Console dan pilih project Anda. Pastikan **Cloud Firestore** sudah dibuat, memakai database **(default)**.
-2. Di **Authentication → Sign-in method**, aktifkan **Anonymous**. Tamu tidak perlu memasukkan email atau membuat akun sendiri; situs membuat identitas anonim secara otomatis.
-3. Konfigurasi Web app project `undangan-218fe` sudah ada di `firebase-config.js`. Nilai konfigurasi Web app boleh ada di berkas publik. Jangan masukkan private key, service-account JSON, atau credential admin ke repository.
+1. Di Firebase Console project `undangan-218fe`, buat **Cloud Firestore** edisi Standard dengan ID **(default)** jika belum ada. Pilih lokasi database yang sesuai dengan lokasi tamu; lokasi resource default tidak dapat diubah setelah dibuat. Pilih **Production mode** agar akses awal ditolak sampai aturan di langkah 2 diterbitkan.
+2. Di **Authentication → Get started → Sign-in method**, aktifkan **Anonymous**. Tamu tidak perlu memasukkan email atau membuat akun sendiri; situs membuat identitas anonim secara otomatis.
+3. Konfigurasi Web app sudah ada di `firebase-config.js`. Nilai konfigurasi Web app boleh ada di berkas publik. Jangan masukkan private key, service-account JSON, atau credential admin ke repository.
 
 ## 2. Pasang Firestore Security Rules
 
@@ -22,4 +22,4 @@ Aturan tersebut mengizinkan tamu membaca 30 ucapan terbaru dan menambah ucapan, 
 
 Dokumen ucapan berada di subkoleksi `invitations/amelia-zeus/wishes`. Halaman menampilkan 30 terbaru; data yang lebih lama tetap ada di Firestore. RSVP atau ucapan lama yang sebelumnya hanya tersimpan di `localStorage` tidak otomatis berpindah ke Firestore.
 
-**Sebelum menerbitkan:** aktifkan Anonymous Authentication dan terbitkan aturan Firestore. Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
+**Sebelum menerbitkan:** buat database, aktifkan Anonymous Authentication, dan terbitkan aturan Firestore. Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
