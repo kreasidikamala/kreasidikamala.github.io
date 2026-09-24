@@ -6,19 +6,7 @@ Undangan ini memakai GitHub Pages untuk tampilan dan Cloud Firestore untuk data 
 
 1. Buka Firebase Console dan pilih project Anda. Pastikan **Cloud Firestore** sudah dibuat, memakai database **(default)**.
 2. Di **Authentication → Sign-in method**, aktifkan **Anonymous**. Tamu tidak perlu memasukkan email atau membuat akun sendiri; situs membuat identitas anonim secara otomatis.
-3. Di **Project settings → Your apps**, pilih Web app (`</>`) atau daftarkan Web app baru. Salin objek `firebaseConfig` yang diberikan.
-4. Isi `firebase-config.js` dengan nilai `apiKey`, `authDomain`, `projectId`, dan `appId` dari Web app tadi. Nilai konfigurasi Web app boleh ada di berkas publik. Jangan masukkan private key, service-account JSON, atau credential admin ke repository.
-
-Contoh bentuknya (nilai di bawah hanya contoh, bukan konfigurasi yang dapat digunakan):
-
-```js
-window.WEDDING_FIREBASE_CONFIG = {
-  apiKey: 'AIza...',
-  authDomain: 'nama-project.firebaseapp.com',
-  projectId: 'nama-project',
-  appId: '1:123456789:web:abc...'
-};
-```
+3. Konfigurasi Web app project `undangan-218fe` sudah ada di `firebase-config.js`. Nilai konfigurasi Web app boleh ada di berkas publik. Jangan masukkan private key, service-account JSON, atau credential admin ke repository.
 
 ## 2. Pasang Firestore Security Rules
 
@@ -34,4 +22,4 @@ Aturan tersebut mengizinkan tamu membaca 30 ucapan terbaru dan menambah ucapan, 
 
 Dokumen ucapan berada di subkoleksi `invitations/amelia-zeus/wishes`. Halaman menampilkan 30 terbaru; data yang lebih lama tetap ada di Firestore. RSVP atau ucapan lama yang sebelumnya hanya tersimpan di `localStorage` tidak otomatis berpindah ke Firestore.
 
-**Sebelum menerbitkan:** konfigurasi Web app dan aturan Firestore harus sudah aktif. Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
+**Sebelum menerbitkan:** aktifkan Anonymous Authentication dan terbitkan aturan Firestore. Firebase App Check dapat ditambahkan untuk mengurangi penyalahgunaan formulir publik; aturan anonim saja tidak mencegah spam sepenuhnya.
