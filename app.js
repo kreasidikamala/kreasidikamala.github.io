@@ -2,8 +2,7 @@
 const CONFIG = {
   giftAddress: '[Isi alamat kado]',
   bank2LogoUrl: '[Isi link logo bank kedua]',
-  brandLogoUrl: '[Isi link logo brand/kredit]',
-  sharedWishesUrl: '[Isi link tautan formulir ucapan bersama]'
+  brandLogoUrl: '[Isi link logo brand/kredit]'
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -56,14 +55,14 @@ async function copyText(text) {
   }
 }
 
-function setGuest(name) {
+function setGuest(name, prefillForms = true) {
   guestName = name;
   $('#coverGuest').textContent = name;
-  $('#rsvpName').value = name;
-  $('#wishName').value = name;
+  $('#rsvpName').value = prefillForms ? name : '';
+  $('#wishName').value = prefillForms ? name : '';
   $('#guestInput').value = name;
 }
-setGuest(guestName);
+setGuest(guestName, Boolean(cleanName(guestFromUrl)));
 
 const audio = $('#backgroundMusic');
 const musicButton = $('#musicControl');
@@ -213,79 +212,15 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight') showPhoto(galleryIndex + 1);
 });
 
-function readStored(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
-}
-function saveStored(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
-}
-const rsvpKey = 'amelia-zeus-rsvp';
-const wishesKey = 'amelia-zeus-wishes';
-let savedRsvp = readStored(rsvpKey, null);
-if (savedRsvp && savedRsvp.name === guestName) {
-  $('#attendance').value = savedRsvp.attendance;
-  $('#guestCount').value = savedRsvp.count;
-  $('#rsvpFeedback').textContent = 'RSVP Anda tersimpan di perangkat ini. Anda dapat memperbaruinya.';
-}
+// Penyimpanan bersama dan daftar ucapan ditangani oleh firestore.js.
+// Cegah form mengirim ulang halaman sebelum sambungan Firebase siap.
 $('#attendance').addEventListener('change', (event) => {
   $('#guestCount').disabled = event.target.value === 'tidak';
 });
-$('#rsvpForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const name = cleanName($('#rsvpName').value);
-  const attendance = $('#attendance').value;
-  const count = attendance === 'hadir' ? $('#guestCount').value : '0';
-  if (!name || !attendance) return;
-  savedRsvp = { name, attendance, count, updatedAt: new Date().toISOString() };
-  const stored = saveStored(rsvpKey, savedRsvp);
-  $('#rsvpFeedback').textContent = stored
-    ? (attendance === 'hadir' ? 'Terima kasih, konfirmasi kehadiran Anda tersimpan di perangkat ini.' : 'Terima kasih sudah memberi kabar. Konfirmasi Anda tersimpan di perangkat ini.')
-    : 'Konfirmasi belum dapat disimpan di perangkat ini.';
-});
-
-let wishes = readStored(wishesKey, []);
-if (!Array.isArray(wishes)) wishes = [];
-function renderWishes() {
-  const list = $('#wishesList');
-  list.replaceChildren();
-  if (!wishes.length) {
-    const empty = document.createElement('p'); empty.className = 'empty-note';
-    empty.textContent = 'Belum ada ucapan di perangkat ini. Jadilah yang pertama mengirim doa.';
-    list.append(empty); return;
-  }
-  wishes.slice(0, 30).forEach((wish) => {
-    const article = document.createElement('article'); article.className = 'wish-item';
-    const head = document.createElement('div'); head.className = 'wish-item__head';
-    const name = document.createElement('strong'); name.textContent = wish.name;
-    const time = document.createElement('time'); time.dateTime = wish.at;
-    time.textContent = new Date(wish.at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-    const message = document.createElement('p'); message.textContent = wish.message;
-    head.append(name, time); article.append(head, message); list.append(article);
-  });
-}
-renderWishes();
-const sharedForm = isConfigured(CONFIG.sharedWishesUrl) ? safeLink(CONFIG.sharedWishesUrl) : null;
-if (sharedForm) {
-  $('#wishesForm').hidden = true;
-  $('#sharedWishesLink').href = sharedForm;
-  $('#sharedWishesLink').hidden = false;
-  $('#storageNote').textContent = 'RSVP tersimpan di perangkat ini. Untuk ucapan bersama, gunakan formulir pada tautan di atas.';
-  $('#wishesList').parentElement.hidden = true;
-}
-$('#wishesForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const name = cleanName($('#wishName').value);
-  const message = $('#wishMessage').value.trim().slice(0, 700);
-  if (!name || !message) return;
-  const next = [{ name, message, at: new Date().toISOString() }, ...wishes].slice(0, 30);
-  if (!saveStored(wishesKey, next)) {
-    $('#wishFeedback').textContent = 'Ucapan belum dapat disimpan di perangkat ini.'; return;
-  }
-  wishes = next;
-  renderWishes();
-  $('#wishMessage').value = '';
-  $('#wishFeedback').textContent = 'Terima kasih. Ucapan tampil dan tersimpan di perangkat ini.';
-});
+$('#rsvpForm').addEventListener('submit', (event) => event.preventDefault());
+$('#wishesForm').addEventListener('submit', (event) => event.preventDefault());
+$('#rsvpForm button[type="submit"]').disabled = true;
+$('#wishesForm button[type="submit"]').disabled = true;
 
 if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
   const observer = new IntersectionObserver((entries) => {
@@ -316,35 +251,6 @@ if (modelContext?.registerTool) {
       $('#applyGuest').click();
       const url = new URL(location.href); url.hash = '';
       return { name, url: url.href };
-    }
-  });
-  register({
-    name: 'save_local_rsvp', title: 'Simpan RSVP',
-    description: 'Save a guest RSVP in this browser and update the visible confirmation. This does not sync across devices.',
-    inputSchema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 80 }, attendance: { type: 'string', enum: ['hadir', 'tidak'] }, count: { type: 'integer', minimum: 1, maximum: 4 } }, required: ['name', 'attendance'], additionalProperties: false },
-    annotations: { readOnlyHint: false, untrustedContentHint: false },
-    execute(input) {
-      const name = cleanName(input?.name);
-      if (!name || !['hadir', 'tidak'].includes(input?.attendance) || (input.attendance === 'hadir' && ![1, 2, 3, 4].includes(input.count))) throw new Error('Isi nama, kehadiran, dan jumlah tamu 1–4 jika hadir.');
-      $('#rsvpName').value = name;
-      $('#attendance').value = input.attendance;
-      $('#guestCount').value = String(input.count || 1);
-      $('#rsvpForm').requestSubmit();
-      return { name, attendance: input.attendance, count: input.attendance === 'hadir' ? input.count : 0, message: $('#rsvpFeedback').textContent };
-    }
-  });
-  if (!sharedForm) register({
-    name: 'add_local_wish', title: 'Kirim ucapan',
-    description: 'Add a wedding wish to the visible list in this browser. It does not sync across devices.',
-    inputSchema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 80 }, message: { type: 'string', minLength: 1, maxLength: 700 } }, required: ['name', 'message'], additionalProperties: false },
-    annotations: { readOnlyHint: false, untrustedContentHint: true },
-    execute(input) {
-      const name = cleanName(input?.name), message = String(input?.message || '').trim().slice(0, 700);
-      if (!name || !message) throw new Error('Nama dan ucapan wajib diisi.');
-      $('#wishName').value = name;
-      $('#wishMessage').value = message;
-      $('#wishesForm').requestSubmit();
-      return { name, message, result: $('#wishFeedback').textContent };
     }
   });
 }
