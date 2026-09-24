@@ -13,7 +13,9 @@
   <link rel="preload" as="image" href="assets/01_Berdiri_formal.webp">
   <link rel="stylesheet" href="styles.css">
   <script>document.documentElement.classList.add('js')</script>
+  <script src="firebase-config.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="firestore.js" type="module"></script>
 </head>
 <body class="is-covered">
   <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -213,10 +215,9 @@
               <button class="solid-pill" type="submit">Kirim Ucapan</button>
             </form>
             <p class="form-feedback" id="wishFeedback" role="status" aria-live="polite"></p>
-            <p class="storage-note" id="storageNote">Ucapan dan RSVP sementara tersimpan di perangkat ini. Agar terlihat oleh semua tamu, sambungkan formulir bersama atau backend.</p>
-            <a id="sharedWishesLink" class="text-link" hidden target="_blank" rel="noopener noreferrer">Buka formulir ucapan bersama <svg class="icon"><use href="#i-arrow"/></svg></a>
+            <p class="storage-note" id="storageNote">Menghubungkan formulir ucapan dan RSVP...</p>
           </div>
-          <div class="wishes__list-wrap"><h3>Ucapan Tamu</h3><div id="wishesList" class="wishes__list" aria-live="polite"><p class="empty-note">Belum ada ucapan di perangkat ini. Jadilah yang pertama mengirim doa.</p></div></div>
+          <div class="wishes__list-wrap"><h3>Ucapan Tamu</h3><div id="wishesList" class="wishes__list" aria-live="polite"><p class="empty-note">Memuat ucapan tamu...</p></div></div>
         </div>
       </section>
 
