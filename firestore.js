@@ -95,6 +95,10 @@ async function initialize() {
         $('#rsvpFeedback').textContent = 'Lengkapi nama, kehadiran, dan jumlah tamu.';
         return;
       }
+      if (!navigator.onLine) {
+        $('#rsvpFeedback').textContent = 'Anda sedang offline. Sambungkan internet, lalu kirim lagi.';
+        return;
+      }
       rsvpButton.disabled = true;
       $('#rsvpFeedback').textContent = 'Mengirim RSVP...';
       try {
@@ -121,6 +125,10 @@ async function initialize() {
       const message = $('#wishMessage').value.trim().slice(0, 700);
       if (!name || !message) {
         $('#wishFeedback').textContent = 'Isi nama dan ucapan terlebih dahulu.';
+        return;
+      }
+      if (!navigator.onLine) {
+        $('#wishFeedback').textContent = 'Anda sedang offline. Sambungkan internet, lalu kirim lagi.';
         return;
       }
       wishButton.disabled = true;
